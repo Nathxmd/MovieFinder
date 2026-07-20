@@ -1,59 +1,76 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import "../styles/MovieDetail.css"; // Assuming you have a CSS file for styling
-import CommentSection from "../components/CommentSection"; // Import the CommentSection component
-
-const API_URL = "https://www.omdbapi.com/?apikey=963505bc";
+import { useNavigate, useParams } from "react-router-dom";
+import CommentSection from "../components/CommentSection";
+import { useAuth } from "../context/AuthContext";
+import { addToWatchlist, getWatchlist, removeFromWatchlist } from "../lib/api";
+import { fetchMovieById, fetchMoviesBySearch } from "../lib/movieApi";
+import "../styles/MovieDetail.css";
 
 export default function MovieDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { session, loading: authLoading } = useAuth();
   const [movie, setMovie] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
 
-  // Ambil detail film
   const fetchMovieDetail = async () => {
-    const res = await fetch(`${API_URL}&i=${id}&plot=full`);
-    const data = await res.json();
+    const data = await fetchMovieById(id);
     setMovie(data);
 
-    // Cek apakah film ini ada di watchlist
-    const watchlist = JSON.parse(localStorage.getItem("watchlist")) || [];
-    setIsInWatchlist(watchlist.some((m) => m.imdbID === data.imdbID));
+    if (session?.access_token) {
+      const watchlist = await getWatchlist(session.access_token);
+      setIsInWatchlist(watchlist.some((item) => item.movieId === data.imdbID));
+    } else {
+      setIsInWatchlist(false);
+    }
 
-    // Ambil rekomendasi film berdasarkan genre pertama
     if (data.Genre) {
       const firstGenre = data.Genre.split(",")[0].trim();
-      const recRes = await fetch(`${API_URL}&s=${firstGenre}`);
-      const recData = await recRes.json();
+      const recData = await fetchMoviesBySearch(firstGenre);
       if (recData.Search) {
-        // Filter agar tidak memunculkan film yang sama
         setRecommendations(
           recData.Search.filter((m) => m.imdbID !== data.imdbID),
         );
       }
     }
-    // limit data rekomendasi menjadi 5
     setRecommendations((prev) => prev.slice(0, 5));
   };
 
-  // Tambah/Hapus dari watchlist
-  const toggleWatchlist = () => {
-    let watchlist = JSON.parse(localStorage.getItem("watchlist")) || [];
-
-    if (isInWatchlist) {
-      watchlist = watchlist.filter((m) => m.imdbID !== movie.imdbID);
-    } else {
-      watchlist.push(movie);
+  const toggleWatchlist = async () => {
+    if (!session?.access_token) {
+      navigate("/auth");
+      return;
     }
 
-    localStorage.setItem("watchlist", JSON.stringify(watchlist));
-    setIsInWatchlist(!isInWatchlist);
+    if (!movie) {
+      return;
+    }
+
+    if (isInWatchlist) {
+      await removeFromWatchlist(movie.imdbID, session.access_token);
+    } else {
+      await addToWatchlist(
+        movie.imdbID,
+        {
+          title: movie.Title,
+          poster: movie.Poster,
+          year: movie.Year,
+          genre: movie.Genre,
+          plot: movie.Plot,
+          director: movie.Director,
+          actors: movie.Actors,
+        },
+        session.access_token,
+      );
+    }
+
+    setIsInWatchlist((currentValue) => !currentValue);
   };
 
   useEffect(() => {
     fetchMovieDetail();
-  }, [id]);
+  }, [id, session?.access_token]);
 
   if (!movie) return <h2>Loading...</h2>;
 
@@ -86,8 +103,16 @@ export default function MovieDetail() {
             <p>
               <strong>Plot:</strong> {movie.Plot}
             </p>
-            <button onClick={toggleWatchlist} className="watchlist-btn">
-              {isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+            <button
+              onClick={toggleWatchlist}
+              className="watchlist-btn"
+              disabled={authLoading}
+            >
+              {session
+                ? isInWatchlist
+                  ? "Remove from Watchlist"
+                  : "Add to Watchlist"
+                : "Sign in to save"}
             </button>
           </div>
         </div>
@@ -111,7 +136,7 @@ export default function MovieDetail() {
           </div>
         )}
         {/* Section Komentar */}
-        <CommentSection movieId={movie.imdbID} movieTitle={movie.Title} />
+        <CommentSection movie={movie} />
       </div>
     </div>
   );

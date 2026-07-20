@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function CommentBox({ onSubmit }) {
+function CommentBox({ onSubmit, disabled = false }) {
   const [name, setName] = useState("");
   const [comment, setComment] = useState("");
   const [rating, setRating] = useState(0);
@@ -9,7 +9,7 @@ function CommentBox({ onSubmit }) {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    if (!comment.trim() || rating === 0) {
+    if (disabled || !comment.trim() || rating === 0) {
       return;
     }
 
@@ -33,6 +33,7 @@ function CommentBox({ onSubmit }) {
         className="comment-input"
         placeholder="Your name (optional)"
         value={name}
+        disabled={disabled}
         onChange={(event) => setName(event.target.value)}
       />
       <div className="rating-group" aria-label="Movie rating">
@@ -44,6 +45,7 @@ function CommentBox({ onSubmit }) {
               key={star}
               type="button"
               className={`star-button ${isActive ? "active" : ""}`}
+              disabled={disabled}
               onClick={() => setRating(star)}
               onMouseEnter={() => setHoverRating(star)}
               onMouseLeave={() => setHoverRating(0)}
@@ -58,10 +60,11 @@ function CommentBox({ onSubmit }) {
         className="comment-textarea"
         placeholder="Write your comment here..."
         value={comment}
+        disabled={disabled}
         onChange={(event) => setComment(event.target.value)}
         rows={4}
       />
-      <button type="submit" className="submit-review-btn">
+      <button type="submit" className="submit-review-btn" disabled={disabled}>
         Submit Review
       </button>
     </form>

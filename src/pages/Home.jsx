@@ -2,16 +2,14 @@ import { useEffect, useState } from "react";
 import { FaSearch } from "react-icons/fa";
 import MovieCard from "../components/MovieCard";
 import "../styles/Home.css";
-
-const API_URL = "https://www.omdbapi.com/?apikey=963505bc";
+import { fetchMoviesBySearch } from "../lib/movieApi";
 
 export default function Home() {
   const [movies, setMovies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const getRandomMovies = async () => {
-    const response = await fetch(`${API_URL}&s=movie`);
-    const data = await response.json();
+    const data = await fetchMoviesBySearch("movie");
 
     if (data.Search) {
       const uniqueMovies = new Set();
@@ -33,8 +31,7 @@ export default function Home() {
   };
 
   const searchMovies = async (title) => {
-    const response = await fetch(`${API_URL}&s=${title}`);
-    const data = await response.json();
+    const data = await fetchMoviesBySearch(title);
     setMovies(data.Search || []);
   };
 

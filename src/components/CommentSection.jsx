@@ -1,28 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import CommentBox from "./CommentBox";
+import { useAuth } from "../context/AuthContext";
+import { getReviews, upsertReview } from "../lib/api";
 import "../styles/CommentSection.css";
 
-function CommentSection({ movieId, movieTitle }) {
-  const storageKey = movieId ? `movie-comments-${movieId}` : null;
+function CommentSection({ movie }) {
+  const { session } = useAuth();
   const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const movieId = movie?.imdbID;
 
   useEffect(() => {
-    if (!storageKey) {
+    if (!movieId) {
       setComments([]);
       return;
     }
 
-    const savedComments = JSON.parse(localStorage.getItem(storageKey)) || [];
-    setComments(savedComments);
-  }, [storageKey]);
+    const loadReviews = async () => {
+      setLoading(true);
+      try {
+        const data = await getReviews(movieId);
+        setComments(data.reviews || []);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  useEffect(() => {
-    if (!storageKey) {
-      return;
-    }
-
-    localStorage.setItem(storageKey, JSON.stringify(comments));
-  }, [comments, storageKey]);
+    loadReviews();
+  }, [movieId]);
 
   const averageRating = useMemo(() => {
     if (comments.length === 0) {
@@ -33,15 +38,29 @@ function CommentSection({ movieId, movieTitle }) {
     return (totalRating / comments.length).toFixed(1);
   }, [comments]);
 
-  const handleAddComment = (newComment) => {
-    setComments((currentComments) => [
+  const handleAddComment = async (newComment) => {
+    if (!session?.access_token || !movie) {
+      return;
+    }
+
+    await upsertReview(
+      movie.imdbID,
       {
-        id: crypto.randomUUID(),
-        ...newComment,
-        createdAt: new Date().toISOString(),
+        title: movie.Title,
+        poster: movie.Poster,
+        year: movie.Year,
+        genre: movie.Genre,
+        plot: movie.Plot,
+        director: movie.Director,
+        actors: movie.Actors,
+        rating: newComment.rating,
+        comment: newComment.comment,
       },
-      ...currentComments,
-    ]);
+      session.access_token,
+    );
+
+    const data = await getReviews(movie.imdbID);
+    setComments(data.reviews || []);
   };
 
   return (
@@ -49,7 +68,9 @@ function CommentSection({ movieId, movieTitle }) {
       <div className="comment-section-header">
         <div>
           <h3>Comments & Reviews</h3>
-          {movieTitle ? <p>Share your thoughts about {movieTitle}.</p> : null}
+          {movie?.Title ? (
+            <p>Share your thoughts about {movie.Title}.</p>
+          ) : null}
         </div>
         <div className="rating-summary">
           <strong>{averageRating}</strong>
@@ -57,9 +78,17 @@ function CommentSection({ movieId, movieTitle }) {
         </div>
       </div>
       <div className="comments-list">
-        <CommentBox onSubmit={handleAddComment} />
+        {!session ? (
+          <p className="empty-review-state">
+            Sign in to leave a review and rate this movie.
+          </p>
+        ) : (
+          <CommentBox onSubmit={handleAddComment} />
+        )}
         <div className="review-list">
-          {comments.length === 0 ? (
+          {loading ? (
+            <p className="empty-review-state">Loading reviews...</p>
+          ) : comments.length === 0 ? (
             <p className="empty-review-state">
               Belum ada review untuk film ini. Jadilah yang pertama memberi
               penilaian.
@@ -68,7 +97,7 @@ function CommentSection({ movieId, movieTitle }) {
             comments.map((comment) => (
               <article key={comment.id} className="review-card">
                 <div className="review-card-header">
-                  <strong>{comment.name}</strong>
+                  <strong>{comment.userId ? "User" : "Anonymous"}</strong>
                   <span>
                     {new Date(comment.createdAt).toLocaleDateString()}
                   </span>

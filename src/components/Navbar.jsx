@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
-import "../styles/Navbar.css"; // kita pisahkan stylenya juga
+import { useAuth } from "../context/AuthContext";
+import "../styles/Navbar.css";
 
 function Navbar() {
+  const { user, loading, signOut } = useAuth();
+
   return (
     <nav className="navbar">
       <div className="navbar-logo">
@@ -13,6 +16,18 @@ function Navbar() {
       <div className="navbar-links">
         <Link to="/">Home</Link>
         <Link to="/watchlist">Watchlist</Link>
+        {loading ? null : user ? (
+          <>
+            <span className="navbar-user">{user.email}</span>
+            <button type="button" className="navbar-action" onClick={signOut}>
+              Logout
+            </button>
+          </>
+        ) : (
+          <Link to="/auth" className="navbar-action-link">
+            Sign In
+          </Link>
+        )}
       </div>
     </nav>
   );

@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Movie {
+  imdbId    String          @id
+  title     String
+  poster    String?
+  year      String?
+  genre     String?
+  plot      String?
+  director  String?
+  actors    String?
+  reviews   Review[]
+  watchlist WatchlistItem[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model WatchlistItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  movieId   String
+  movie     Movie    @relation(fields: [movieId], references: [imdbId], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, movieId])
+  @@index([userId])
+}
+
+model Review {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  movieId   String
+  rating    Int
+  comment   String
+  movie     Movie    @relation(fields: [movieId], references: [imdbId], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, movieId])
+  @@index([movieId])
+  @@index([userId])
+}
