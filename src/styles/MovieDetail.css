@@ -55,7 +55,7 @@
 .rec-list {
   display: flex;
   gap: 15px;
-  overflow-x: auto;
+  /* overflow-x: auto; */
 }
 
 .rec-card {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "../styles/MovieDetail.css"; // Assuming you have a CSS file for styling
+import CommentSection from "../components/CommentSection"; // Import the CommentSection component
 
 const API_URL = "https://www.omdbapi.com/?apikey=963505bc";
 
@@ -28,10 +29,12 @@ export default function MovieDetail() {
       if (recData.Search) {
         // Filter agar tidak memunculkan film yang sama
         setRecommendations(
-          recData.Search.filter((m) => m.imdbID !== data.imdbID)
+          recData.Search.filter((m) => m.imdbID !== data.imdbID),
         );
       }
     }
+    // limit data rekomendasi menjadi 5
+    setRecommendations((prev) => prev.slice(0, 5));
   };
 
   // Tambah/Hapus dari watchlist
@@ -107,6 +110,8 @@ export default function MovieDetail() {
             </div>
           </div>
         )}
+        {/* Section Komentar */}
+        <CommentSection movieId={movie.imdbID} movieTitle={movie.Title} />
       </div>
     </div>
   );
