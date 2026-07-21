@@ -17,6 +17,7 @@ export default function MovieDetail() {
   const [movie, setMovie] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
+  const [showTrailer, setShowTrailer] = useState(false);
 
   const fetchMovieDetail = async () => {
     const data = await fetchMovieById(id);
@@ -74,6 +75,9 @@ export default function MovieDetail() {
 
   const posterUrl = getTmdbImageUrl(movie.poster_path, "original");
   const backdropUrl = getTmdbImageUrl(movie.backdrop_path, "original");
+  const trailer = movie.videos?.results?.find(
+    (v) => v.type === "Trailer" && v.site === "YouTube"
+  );
 
   return (
     <div
@@ -111,19 +115,46 @@ export default function MovieDetail() {
             <p>
               <strong>Plot:</strong> {movie.overview}
             </p>
-            <button
-              onClick={toggleWatchlist}
-              className="watchlist-btn"
-              disabled={authLoading}
-            >
-              {session
-                ? isInWatchlist
-                  ? "Remove from Watchlist"
-                  : "Add to Watchlist"
-                : "Sign in to save"}
-            </button>
+            <div className="action-buttons">
+              {trailer && (
+                <button
+                  onClick={() => setShowTrailer(true)}
+                  className="trailer-btn"
+                >
+                  Watch Trailer
+                </button>
+              )}
+              <button
+                onClick={toggleWatchlist}
+                className="watchlist-btn"
+                disabled={authLoading}
+              >
+                {session
+                  ? isInWatchlist
+                    ? "Remove from Watchlist"
+                    : "Add to Watchlist"
+                  : "Sign in to save"}
+              </button>
+            </div>
           </div>
         </div>
+
+        {showTrailer && trailer && (
+          <div className="trailer-modal" onClick={() => setShowTrailer(false)}>
+            <div className="trailer-content" onClick={(e) => e.stopPropagation()}>
+              <button className="close-btn" onClick={() => setShowTrailer(false)}>
+                ×
+              </button>
+              <iframe
+                src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1`}
+                title="Trailer"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
 
         {recommendations.length > 0 && (
           <div className="recommendations">
