@@ -55,6 +55,7 @@ function CommentSection({ movie }) {
         actors: movie.Actors,
         rating: newComment.rating,
         comment: newComment.comment,
+        reviewerName: newComment.name,
       },
       session.access_token,
     );
@@ -97,7 +98,7 @@ function CommentSection({ movie }) {
             comments.map((comment) => (
               <article key={comment.id} className="review-card">
                 <div className="review-card-header">
-                  <strong>{comment.userId ? "User" : "Anonymous"}</strong>
+                  <strong>{comment.reviewerName || "Anonymous"}</strong>
                   <span>
                     {new Date(comment.createdAt).toLocaleDateString()}
                   </span>

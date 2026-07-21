@@ -48,10 +48,12 @@ export class ReviewsService {
         movieId: imdbId,
         rating: dto.rating,
         comment: dto.comment,
+        reviewerName: dto.reviewerName,
       },
       update: {
         rating: dto.rating,
         comment: dto.comment,
+        reviewerName: dto.reviewerName,
       },
     });
   }

@@ -21,4 +21,8 @@ export class UpsertReviewDto extends MovieSnapshotDto {
   @IsOptional()
   @IsString()
   source?: string;
+
+  @IsOptional()
+  @IsString()
+  reviewerName?: string;
 }
