@@ -1,30 +1,49 @@
-const OMDB_API_KEY = import.meta.env.VITE_OMDB_API_KEY;
-const OMDB_BASE_URL =
-  import.meta.env.VITE_OMDB_API_URL ?? "https://www.omdbapi.com/";
+const TMDB_ACCESS_TOKEN = import.meta.env.VITE_TMDB_API_KEY;
+const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
-if (!OMDB_API_KEY) {
-  throw new Error("Missing OMDb API key environment variable");
+if (!TMDB_ACCESS_TOKEN) {
+  throw new Error("Missing TMDB API key environment variable");
 }
 
-function buildOmdbUrl(params) {
-  const url = new URL(OMDB_BASE_URL);
-  url.searchParams.set("apikey", OMDB_API_KEY);
-
+async function tmdbFetch(path, params = {}) {
+  const url = new URL(`${TMDB_BASE_URL}${path}`);
   Object.entries(params).forEach(([key, value]) => {
-    if (value) {
+    if (value !== undefined) {
       url.searchParams.set(key, value);
     }
   });
-
-  return url.toString();
-}
-
-export async function fetchMoviesBySearch(query) {
-  const response = await fetch(buildOmdbUrl({ s: query }));
+  const response = await fetch(url.toString(), {
+    headers: {
+      accept: "application/json",
+      Authorization: `Bearer ${TMDB_ACCESS_TOKEN}`,
+    },
+  });
   return response.json();
 }
 
-export async function fetchMovieById(imdbId) {
-  const response = await fetch(buildOmdbUrl({ i: imdbId, plot: "full" }));
-  return response.json();
+export async function searchMovies(query, page = 1) {
+  return tmdbFetch("/search/movie", { query, page });
+}
+
+export async function fetchNowPlayingMovies() {
+  return tmdbFetch("/movie/now_playing");
+}
+
+export async function fetchTopRatedMovies() {
+  return tmdbFetch("/movie/top_rated");
+}
+
+export async function fetchMovieById(tmdbId) {
+  return tmdbFetch(`/movie/${tmdbId}`, {
+    append_to_response: "credits",
+  });
+}
+
+export async function fetchMovieRecommendations(tmdbId) {
+  return tmdbFetch(`/movie/${tmdbId}/recommendations`);
+}
+
+export function getTmdbImageUrl(path, size = "w500") {
+  if (!path) return null;
+  return `https://image.tmdb.org/t/p/${size}${path}`;
 }

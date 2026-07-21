@@ -3,7 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import CommentSection from "../components/CommentSection";
 import { useAuth } from "../context/AuthContext";
 import { addToWatchlist, getWatchlist, removeFromWatchlist } from "../lib/api";
-import { fetchMovieById, fetchMoviesBySearch } from "../lib/movieApi";
+import {
+  fetchMovieById,
+  fetchMovieRecommendations,
+  getTmdbImageUrl,
+} from "../lib/movieApi";
 import "../styles/MovieDetail.css";
 
 export default function MovieDetail() {
@@ -20,21 +24,13 @@ export default function MovieDetail() {
 
     if (session?.access_token) {
       const watchlist = await getWatchlist(session.access_token);
-      setIsInWatchlist(watchlist.some((item) => item.movieId === data.imdbID));
+      setIsInWatchlist(watchlist.some((item) => item.movieId === String(data.id)));
     } else {
       setIsInWatchlist(false);
     }
 
-    if (data.Genre) {
-      const firstGenre = data.Genre.split(",")[0].trim();
-      const recData = await fetchMoviesBySearch(firstGenre);
-      if (recData.Search) {
-        setRecommendations(
-          recData.Search.filter((m) => m.imdbID !== data.imdbID),
-        );
-      }
-    }
-    setRecommendations((prev) => prev.slice(0, 5));
+    const recData = await fetchMovieRecommendations(id);
+    setRecommendations(recData.results?.slice(0, 5) || []);
   };
 
   const toggleWatchlist = async () => {
@@ -47,19 +43,21 @@ export default function MovieDetail() {
       return;
     }
 
+    const movieId = String(movie.id);
+
     if (isInWatchlist) {
-      await removeFromWatchlist(movie.imdbID, session.access_token);
+      await removeFromWatchlist(movieId, session.access_token);
     } else {
       await addToWatchlist(
-        movie.imdbID,
+        movieId,
         {
-          title: movie.Title,
-          poster: movie.Poster,
-          year: movie.Year,
-          genre: movie.Genre,
-          plot: movie.Plot,
-          director: movie.Director,
-          actors: movie.Actors,
+          title: movie.title,
+          poster: getTmdbImageUrl(movie.poster_path),
+          year: movie.release_date?.substring(0, 4),
+          genre: movie.genres?.map((g) => g.name).join(", "),
+          plot: movie.overview,
+          director: movie.credits?.crew?.find((c) => c.job === "Director")?.name,
+          actors: movie.credits?.cast?.slice(0, 5).map((c) => c.name).join(", "),
         },
         session.access_token,
       );
@@ -74,34 +72,44 @@ export default function MovieDetail() {
 
   if (!movie) return <h2>Loading...</h2>;
 
+  const posterUrl = getTmdbImageUrl(movie.poster_path, "original");
+  const backdropUrl = getTmdbImageUrl(movie.backdrop_path, "original");
+
   return (
     <div
       className="movie-detail"
       style={{
-        backgroundImage: `url(${movie.Poster})`,
+        backgroundImage: `url(${backdropUrl || posterUrl})`,
       }}
     >
       <div className="overlay">
         <div className="detail-content">
           <div className="poster">
-            <img src={movie.Poster} alt={movie.Title} />
+            <img src={posterUrl} alt={movie.title} />
           </div>
           <div className="info">
-            <h1>{movie.Title}</h1>
+            <h1>{movie.title}</h1>
             <p>
-              <strong>Released:</strong> {movie.Released}
+              <strong>Released:</strong> {movie.release_date}
             </p>
             <p>
-              <strong>Genre:</strong> {movie.Genre}
+              <strong>Genre:</strong>{" "}
+              {movie.genres?.map((g) => g.name).join(", ")}
             </p>
             <p>
-              <strong>Director:</strong> {movie.Director}
+              <strong>Director:</strong>{" "}
+              {movie.credits?.crew?.find((c) => c.job === "Director")?.name ||
+                "N/A"}
             </p>
             <p>
-              <strong>Actors:</strong> {movie.Actors}
+              <strong>Actors:</strong>{" "}
+              {movie.credits?.cast
+                ?.slice(0, 5)
+                .map((c) => c.name)
+                .join(", ") || "N/A"}
             </p>
             <p>
-              <strong>Plot:</strong> {movie.Plot}
+              <strong>Plot:</strong> {movie.overview}
             </p>
             <button
               onClick={toggleWatchlist}
@@ -117,26 +125,42 @@ export default function MovieDetail() {
           </div>
         </div>
 
-        {/* Rekomendasi Film */}
         {recommendations.length > 0 && (
           <div className="recommendations">
             <h2>Recommended Movies</h2>
             <div className="rec-list">
               {recommendations.map((rec) => (
                 <a
-                  key={rec.imdbID}
-                  href={`/movie/${rec.imdbID}`}
+                  key={rec.id}
+                  href={`/movie/${rec.id}`}
                   className="rec-card"
                 >
-                  <img src={rec.Poster} alt={rec.Title} />
-                  <p>{rec.Title}</p>
+                  <img
+                    src={getTmdbImageUrl(rec.poster_path) || "/no-poster.png"}
+                    alt={rec.title}
+                  />
+                  <p>{rec.title}</p>
                 </a>
               ))}
             </div>
           </div>
         )}
-        {/* Section Komentar */}
-        <CommentSection movie={movie} />
+        <CommentSection
+          movie={{
+            imdbID: String(movie.id),
+            Title: movie.title,
+            Poster: posterUrl,
+            Year: movie.release_date?.substring(0, 4),
+            Genre: movie.genres?.map((g) => g.name).join(", "),
+            Plot: movie.overview,
+            Director:
+              movie.credits?.crew?.find((c) => c.job === "Director")?.name,
+            Actors: movie.credits?.cast
+              ?.slice(0, 5)
+              .map((c) => c.name)
+              .join(", "),
+          }}
+        />
       </div>
     </div>
   );

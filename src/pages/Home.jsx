@@ -1,43 +1,78 @@
 import { useEffect, useState } from "react";
 import { FaSearch } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import MovieCard from "../components/MovieCard";
 import "../styles/Home.css";
-import { fetchMoviesBySearch } from "../lib/movieApi";
+import {
+  searchMovies,
+  fetchNowPlayingMovies,
+  fetchTopRatedMovies,
+  getTmdbImageUrl,
+} from "../lib/movieApi";
+
+function TmdbMovieCard({ movie }) {
+  const posterUrl = getTmdbImageUrl(movie.poster_path) || "/no-poster.png";
+
+  return (
+    <Link to={`/movie/${movie.id}`} className="movie">
+      <div>
+        <p>{movie.overview?.substring(0, 150)}...</p>
+      </div>
+      <div>
+        <img src={posterUrl} alt={movie.title} />
+      </div>
+      <div>
+        <span>{movie.release_date?.substring(0, 4) || "N/A"}</span>
+        <h3>{movie.title}</h3>
+      </div>
+    </Link>
+  );
+}
 
 export default function Home() {
   const [movies, setMovies] = useState([]);
+  const [nowPlaying, setNowPlaying] = useState([]);
+  const [topRated, setTopRated] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const getRandomMovies = async () => {
-    const data = await fetchMoviesBySearch("movie");
-
-    if (data.Search) {
-      const uniqueMovies = new Set();
-      const randomMovies = [];
-      const totalMovies = data.Search.length;
-
-      while (uniqueMovies.size < Math.min(6, totalMovies)) {
-        const randomIndex = Math.floor(Math.random() * totalMovies);
-        const movie = data.Search[randomIndex];
-
-        if (!uniqueMovies.has(movie.imdbID)) {
-          uniqueMovies.add(movie.imdbID);
-          randomMovies.push(movie);
-        }
+  useEffect(() => {
+    const loadFeaturedMovies = async () => {
+      setLoading(true);
+      try {
+        const [nowPlayingData, topRatedData] = await Promise.all([
+          fetchNowPlayingMovies(),
+          fetchTopRatedMovies(),
+        ]);
+        setNowPlaying(nowPlayingData.results?.slice(0, 6) || []);
+        setTopRated(topRatedData.results?.slice(0, 6) || []);
+      } finally {
+        setLoading(false);
       }
+    };
+    loadFeaturedMovies();
+  }, []);
 
-      setMovies(randomMovies);
+  const searchMoviesHandler = async (title) => {
+    if (!title.trim()) {
+      setMovies([]);
+      setHasSearched(false);
+      return;
+    }
+    setLoading(true);
+    setHasSearched(true);
+    try {
+      const data = await searchMovies(title);
+      setMovies(data.results || []);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const searchMovies = async (title) => {
-    const data = await fetchMoviesBySearch(title);
-    setMovies(data.Search || []);
+  const handleSearch = () => {
+    searchMoviesHandler(searchTerm);
   };
-
-  useEffect(() => {
-    getRandomMovies();
-  }, []);
 
   return (
     <div className="home">
@@ -47,23 +82,54 @@ export default function Home() {
           placeholder="Search for a movie..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && searchMovies(searchTerm)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
         />
-        <button onClick={() => searchMovies(searchTerm)}>
+        <button onClick={handleSearch}>
           <FaSearch />
         </button>
       </div>
 
-      {movies?.length > 0 ? (
-        <div className="container">
-          {movies.map((movie) => (
-            <MovieCard key={movie.imdbID} movie={movie} />
-          ))}
+      {loading ? (
+        <div className="empty">
+          <h2>Loading...</h2>
+        </div>
+      ) : hasSearched && movies.length > 0 ? (
+        <section className="movie-section">
+          <h2 className="section-title">Search Results</h2>
+          <div className="container">
+            {movies.map((movie) => (
+              <TmdbMovieCard key={movie.id} movie={movie} />
+            ))}
+          </div>
+        </section>
+      ) : hasSearched && movies.length === 0 ? (
+        <div className="empty">
+          <h2>No movies found</h2>
         </div>
       ) : (
-        <div className="empty">
-          <h2>No movies found 😢</h2>
-        </div>
+        <>
+          {nowPlaying.length > 0 && (
+            <section className="movie-section">
+              <h2 className="section-title">Now Playing</h2>
+              <div className="container">
+                {nowPlaying.map((movie) => (
+                  <TmdbMovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {topRated.length > 0 && (
+            <section className="movie-section">
+              <h2 className="section-title">Top Rated</h2>
+              <div className="container">
+                {topRated.map((movie) => (
+                  <TmdbMovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   );
