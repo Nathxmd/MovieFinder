@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CommentSection from "../components/CommentSection";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { addToWatchlist, getWatchlist, removeFromWatchlist } from "../lib/api";
 import {
   fetchMovieById,
@@ -14,6 +15,7 @@ export default function MovieDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [movie, setMovie] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
@@ -46,25 +48,30 @@ export default function MovieDetail() {
 
     const movieId = String(movie.id);
 
-    if (isInWatchlist) {
-      await removeFromWatchlist(movieId, session.access_token);
-    } else {
-      await addToWatchlist(
-        movieId,
-        {
-          title: movie.title,
-          poster: getTmdbImageUrl(movie.poster_path),
-          year: movie.release_date?.substring(0, 4),
-          genre: movie.genres?.map((g) => g.name).join(", "),
-          plot: movie.overview,
-          director: movie.credits?.crew?.find((c) => c.job === "Director")?.name,
-          actors: movie.credits?.cast?.slice(0, 5).map((c) => c.name).join(", "),
-        },
-        session.access_token,
-      );
+    try {
+      if (isInWatchlist) {
+        await removeFromWatchlist(movieId, session.access_token);
+        toast.success("Removed from watchlist");
+      } else {
+        await addToWatchlist(
+          movieId,
+          {
+            title: movie.title,
+            poster: getTmdbImageUrl(movie.poster_path),
+            year: movie.release_date?.substring(0, 4),
+            genre: movie.genres?.map((g) => g.name).join(", "),
+            plot: movie.overview,
+            director: movie.credits?.crew?.find((c) => c.job === "Director")?.name,
+            actors: movie.credits?.cast?.slice(0, 5).map((c) => c.name).join(", "),
+          },
+          session.access_token,
+        );
+        toast.success("Added to watchlist");
+      }
+      setIsInWatchlist((currentValue) => !currentValue);
+    } catch {
+      toast.error("Failed to update watchlist");
     }
-
-    setIsInWatchlist((currentValue) => !currentValue);
   };
 
   useEffect(() => {

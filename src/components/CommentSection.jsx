@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import CommentBox from "./CommentBox";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { getReviews, upsertReview } from "../lib/api";
 import "../styles/CommentSection.css";
 
 function CommentSection({ movie }) {
   const { session } = useAuth();
+  const toast = useToast();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const movieId = movie?.imdbID;
@@ -43,25 +45,29 @@ function CommentSection({ movie }) {
       return;
     }
 
-    await upsertReview(
-      movie.imdbID,
-      {
-        title: movie.Title,
-        poster: movie.Poster,
-        year: movie.Year,
-        genre: movie.Genre,
-        plot: movie.Plot,
-        director: movie.Director,
-        actors: movie.Actors,
-        rating: newComment.rating,
-        comment: newComment.comment,
-        reviewerName: newComment.name,
-      },
-      session.access_token,
-    );
-
-    const data = await getReviews(movie.imdbID);
-    setComments(data.reviews || []);
+    try {
+      await upsertReview(
+        movie.imdbID,
+        {
+          title: movie.Title,
+          poster: movie.Poster,
+          year: movie.Year,
+          genre: movie.Genre,
+          plot: movie.Plot,
+          director: movie.Director,
+          actors: movie.Actors,
+          rating: newComment.rating,
+          comment: newComment.comment,
+          reviewerName: newComment.name,
+        },
+        session.access_token,
+      );
+      toast.success("Review posted successfully");
+      const data = await getReviews(movie.imdbID);
+      setComments(data.reviews || []);
+    } catch {
+      toast.error("Failed to post review");
+    }
   };
 
   return (

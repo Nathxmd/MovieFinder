@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Navbar from "./components/Navbar";
@@ -10,16 +11,18 @@ import Watchlist from "./pages/Watchlist";
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/movie/:id" element={<MovieDetail />} />
-          <Route path="/watchlist" element={<Watchlist />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-        </Routes>
-      </Router>
+      <ToastProvider>
+        <Router>
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/movie/:id" element={<MovieDetail />} />
+            <Route path="/watchlist" element={<Watchlist />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+          </Routes>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

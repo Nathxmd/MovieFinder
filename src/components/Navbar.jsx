@@ -1,9 +1,16 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import "../styles/Navbar.css";
 
 function Navbar() {
   const { user, loading, signOut } = useAuth();
+  const toast = useToast();
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success("Logged out successfully");
+  };
 
   return (
     <nav className="navbar">
@@ -19,7 +26,7 @@ function Navbar() {
         {loading ? null : user ? (
           <>
             <span className="navbar-user">{user.email}</span>
-            <button type="button" className="navbar-action" onClick={signOut}>
+            <button type="button" className="navbar-action" onClick={handleLogout}>
               Logout
             </button>
           </>

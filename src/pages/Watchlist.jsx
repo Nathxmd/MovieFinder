@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getWatchlist, removeFromWatchlist } from "../lib/api";
 import "../styles/Watchlist.css";
+import { useToast } from "../context/ToastContext";
 
 export default function Watchlist() {
   const [watchlist, setWatchlist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { session } = useAuth();
+  const toast = useToast();
 
   useEffect(() => {
     const loadWatchlist = async () => {
@@ -40,11 +42,11 @@ export default function Watchlist() {
     }
 
     await removeFromWatchlist(id, session.access_token);
-    setWatchlist((currentWatchlist) =>
-      currentWatchlist.filter((item) => item.movieId !== id),
-    );
+    (toast.success("Removed from watchlist"),
+      setWatchlist((currentWatchlist) =>
+        currentWatchlist.filter((item) => item.movieId !== id),
+      ));
   };
-
   if (!session) {
     return (
       <div className="watchlist-page">
